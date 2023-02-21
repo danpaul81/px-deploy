@@ -6,9 +6,9 @@ write_files:
     path: /tmp/id_rsa
     permissions: '0600'
   - content: |
-%{ for line in tpl_credentials ~}
-     ${line}
-%{ endfor ~}
+     [default]
+     aws_access_key_id = ${tpl_aws_id}
+     aws_secret_access_key = ${tpl_aws_secret}     
     path: /tmp/credentials
     permissions: '0600'
   

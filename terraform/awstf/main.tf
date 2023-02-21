@@ -274,7 +274,8 @@ resource "local_file" "cloud-init" {
 	for_each 					=	{for server in local.instances: server.instance_name =>  server}
 	content = templatefile("${path.module}/cloud-init.tpl", {
 		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
-		tpl_credentials = local.aws_credentials_array,
+		tpl_aws_id = aws_iam_access_key.pxdeploykey.id
+		tpl_aws_secret = aws_iam_access_key.pxdeploykey.secret
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,

@@ -58,17 +58,3 @@ variable "aws_region" {
 data "local_file" "env_script" {
 	filename = "${path.module}/env.sh"
 }
-
-# local aws credentials to be passed to master nodes via cloud-init file
-data "local_file" "aws_credential_file" {
-  filename = "/root/.aws/credentials"
-}
-
-# re-read file line-by line, remove line breaks and store in array
-# template file will read each line and print with fitting spaces to keep resulting yaml valid
- locals {
-	aws_credentials_array = [
-	for line in split("\n", data.local_file.aws_credential_file.content):
-	  chomp(line)
-	 ]
-}
