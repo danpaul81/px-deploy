@@ -107,12 +107,35 @@ type Config struct {
 	Vsphere__Userdata        string `yaml:"vsphere__userdata,omitempty"`
 	Ssh_Pub_Key              string
 	Run_Predelete            bool
+	Testing                  Testing_Def
 }
 
 type Config_Cluster struct {
 	Id            int
 	Scripts       []string
 	Instance_Type string
+}
+
+type Testing_Def struct {
+	MaxParallel          int
+	GlobalTestParameters []Testing_Parameters
+	GlobalTestPlatform   []Testing_Platform
+	TestClouds           []Testing_Cloud
+}
+
+type Testing_Cloud struct {
+	Cloud         string
+	TestPlatforms []Testing_Platform
+}
+
+type Testing_Platform struct {
+	Platform       string
+	TestParameters []Testing_Parameters
+}
+
+type Testing_Parameters struct {
+	Parameter string
+	Values    []string
 }
 
 type Deployment_Status_Return struct {

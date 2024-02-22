@@ -1,2 +1,32 @@
 description: Install and run Portworx on each cluster
 scripts: ["install-px"]
+testing:
+  maxparallel: 10
+  globaltestparameters:
+  - parameter: "px_version"
+    values: ["2.13.5","3.0.4"]
+  globaltestplatform:
+    - platform: "k8s"
+      testparameters:
+      - parameter: "k8s_version"
+        values: ["1.26.4","1.27.4","1.28.4"]
+  testclouds:
+  - cloud: "aws"
+    testplatforms:
+    - platform: "k8s"
+    - platform: "eks"
+    - platform: "ocp4"
+      testparameters:
+      - parameter: "px_version"
+        values: ["3.10"]
+  - cloud: "azure"
+    testplatforms:
+    - platform: "k8s"
+    - platform: "aks"
+  - cloud: "vsphere"
+    testplatforms:
+    - platform: "k8s"
+  - cloud: "gcp"
+    testplatforms:
+    - platform: "k8s"
+    - platform: "gke"
