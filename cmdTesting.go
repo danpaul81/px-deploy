@@ -16,11 +16,29 @@ var cmdTesting = &cobra.Command{
 func RunTesting(cmd *cobra.Command, args []string) {
 	//var flags Config
 	fmt.Printf("testrun named %s template %s\n", testingName, testingTemplate)
-	//config := parse_yaml("defaults.yml")
+
+	default_config := parse_yaml("defaults.yml")
 	config_template := parse_yaml("templates/" + testingTemplate + ".yml")
 
-	for _, gtpa := range config_template.Testing.GlobalTestParameters {
+	// range thru globaltestparameters and add value from defaults.yml if !replace is set
+	// TODO: skip possible double entries
+	// these can happen when default.yml has same value
+	for k, gtpa := range config_template.Testing.GlobalTestParameters {
 		fmt.Printf("G  parameter: %s :", gtpa.Parameter)
+		if !gtpa.Replace {
+			//config_template.Testing.GlobalTestParameters[k].Values = nil
+			// TODO P1 fix: append from correct defaults index
+			config_template.Testing.GlobalTestParameters[k].Values = append(config_template.Testing.GlobalTestParameters[k].Values, default_config.Px_Version)
+		}
+
+		for _, tval := range gtpa.Values {
+			fmt.Printf(" %s ", tval)
+		}
+		fmt.Printf("\n")
+	}
+
+	for _, gtpa := range config_template.Testing.GlobalTestParameters {
+		fmt.Printf("G assembled parameter: %s :", gtpa.Parameter)
 		for _, tval := range gtpa.Values {
 			fmt.Printf(" %s ", tval)
 		}
@@ -51,6 +69,7 @@ func RunTesting(cmd *cobra.Command, args []string) {
 			}
 		}
 	}
+
 	//prep_error := prepare_deployment(&config, &flags, testingName, "", testingTemplate, "")
 	//if prep_error != "" {
 	//	die(prep_error)
