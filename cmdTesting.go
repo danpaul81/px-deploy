@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -24,21 +26,24 @@ func RunTesting(cmd *cobra.Command, args []string) {
 	// TODO: skip possible double entries
 	// these can happen when default.yml has same value
 	for k, gtpa := range config_template.Testing.GlobalTestParameters {
-		fmt.Printf("G  parameter: %s :", gtpa.Parameter)
-		if !gtpa.Replace {
-			//config_template.Testing.GlobalTestParameters[k].Values = nil
-			// TODO P1 fix: append from correct defaults index
-			config_template.Testing.GlobalTestParameters[k].Values = append(config_template.Testing.GlobalTestParameters[k].Values, default_config.Px_Version)
-		}
-
+		fmt.Printf("globaltestparameter (template): %s :", gtpa.Parameter)
 		for _, tval := range gtpa.Values {
 			fmt.Printf(" %s ", tval)
 		}
 		fmt.Printf("\n")
+		if !gtpa.Replace {
+			defVal := getDefaultValue(gtpa.Parameter, &default_config)
+			if defVal != "" {
+				fmt.Printf("  Adding %s = %s from defaults.yml\n", gtpa.Parameter, defVal)
+				config_template.Testing.GlobalTestParameters[k].Values = append(config_template.Testing.GlobalTestParameters[k].Values, defVal)
+			} else {
+				fmt.Printf("No defaults.yml value for %s found. \n", gtpa.Parameter)
+			}
+		}
 	}
 
 	for _, gtpa := range config_template.Testing.GlobalTestParameters {
-		fmt.Printf("G assembled parameter: %s :", gtpa.Parameter)
+		fmt.Printf("globaltestparameter: %s :", gtpa.Parameter)
 		for _, tval := range gtpa.Values {
 			fmt.Printf(" %s ", tval)
 		}
@@ -75,5 +80,16 @@ func RunTesting(cmd *cobra.Command, args []string) {
 	//	die(prep_error)
 	//}
 	//_ = create_deployment(config)
+}
 
+func getDefaultValue(field string, config *Config) string {
+	refConf := reflect.ValueOf(*config)
+	typeOfC := refConf.Type()
+	for i := 0; i < refConf.NumField(); i++ {
+		if strings.ToLower(typeOfC.Field(i).Name) == strings.ToLower(field) {
+			//fmt.Printf("found field %s in defaults\n", refConf.Field(i).Interface())
+			return fmt.Sprintf("%s", refConf.Field(i).Interface())
+		}
+	}
+	return ""
 }
