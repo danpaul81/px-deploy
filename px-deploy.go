@@ -134,9 +134,9 @@ type Testing_Platform struct {
 }
 
 type Testing_Parameters struct {
-	Replace   bool
-	Parameter string
-	Values    []string
+	Ignoredefault bool
+	Parameter     string
+	Values        []string
 }
 
 type Deployment_Status_Return struct {
