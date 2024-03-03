@@ -211,7 +211,7 @@ func getvSphereNodeIp(mobId string, mac string, v *vsphereRestClient) (ip string
 		return "", fmt.Errorf(resp.Status)
 	}
 
-	return "", fmt.Errorf("API did not get IP for node %s \n request body: %v \n", mobId, responseObj)
+	return "", fmt.Errorf("API did not get IP for node %s \n request body: %v", mobId, responseObj)
 }
 
 func vsphere_create_variables(config *Config) []string {
@@ -335,7 +335,7 @@ func vsphere_get_localtemplate(config *Config, c chan string) {
 	// vsphere REST api does not provide VM.config.extraconfig Information
 	// so we need to run govc
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_URL=%s", config.Vsphere_Host))
-	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_INSECURE=1"))
+	govc_opts = append(govc_opts, "GOVC_INSECURE=1")
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_USERNAME=%s", config.Vsphere_User))
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_PASSWORD=%s", config.Vsphere_Password))
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_DATACENTER=%s", config.Vsphere_Datacenter))
@@ -393,6 +393,7 @@ func vsphere_get_node_ip(config *Config, node string) string {
 	return ""
 }
 
+/*
 func vsphere_destroy_vm(nodemap string, v *vsphereRestClient) {
 	defer wg.Done()
 
@@ -421,7 +422,7 @@ func vsphere_destroy_vm(nodemap string, v *vsphereRestClient) {
 		fmt.Printf("VM %s delete failed. Code %s \n", mobid, resp.Status)
 	}
 }
-
+*/
 // rest api only disconnects vmdk from vm. no actual deletion
 func vsphere_delete_clouddrive(clouddrive Vsphere_Px_Clouddrive, v *vsphereRestClient) {
 	defer wg.Done()
@@ -493,7 +494,7 @@ func vsphere_get_clouddrives(nodemap string, v *vsphereRestClient, clouddrives *
 			}
 		}
 	} else {
-		return fmt.Errorf("Collect px cloud drive api error %v\n Response %v \n", resp.StatusCode, string(respBody))
+		return fmt.Errorf("collect px cloud drive api error %v\n Response %v", resp.StatusCode, string(respBody))
 	}
 	return
 }
@@ -524,7 +525,7 @@ func vsphere_get_vm_powerstate(mobid string, v *vsphereRestClient) (powerstate s
 	if resp.StatusCode == 200 {
 		return responseobj.State, nil
 	} else {
-		return "ERROR", fmt.Errorf("Power State API request returned %v", resp.StatusCode)
+		return "ERROR", fmt.Errorf("power state API request returned %v", resp.StatusCode)
 	}
 }
 
@@ -564,7 +565,7 @@ func vsphere_poweroff_wait(nodemap string, v *vsphereRestClient) {
 
 	if resp.StatusCode == 204 {
 		stopped := false
-		for stopped != true {
+		for !stopped {
 			time.Sleep(2 * time.Second)
 			pwrstate, err := vsphere_get_vm_powerstate(mobid, v)
 			if err != nil {
@@ -712,7 +713,7 @@ func vsphere_init() {
 	vsphere_template_base := path.Base(config.Vsphere_Template)
 
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_URL=%s", config.Vsphere_Host))
-	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_INSECURE=1"))
+	govc_opts = append(govc_opts, "GOVC_INSECURE=1")
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_RESOURCE_POOL=%s", config.Vsphere_Resource_Pool))
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_CLUSTER=%s", config.Vsphere_Compute_Resource))
 	govc_opts = append(govc_opts, fmt.Sprintf("GOVC_USERNAME=%s", config.Vsphere_User))
@@ -740,6 +741,10 @@ func vsphere_init() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
+	if err != nil {
+		fmt.Println(Red + "ERROR removing old template" + Reset)
+		return
+	}
 
 	fmt.Printf("Renaming new template VM to %s\n", config.Vsphere_Template)
 	cmd = exec.Command("govc", "vm.change", "-vm="+vsphere_template_base+"_tmp", "-name="+vsphere_template_base)

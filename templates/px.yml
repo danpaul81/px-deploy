@@ -15,6 +15,9 @@ testing:
       - parameter: "k8s_version"
         ignoredefault: false
         values: ["1.27.4","1.28.4"]
+      - parameter: "px_version"
+        ignoredefault: false
+        values: ["3.13.0","3.0.4","3.1.0"]
     - platform: "eks"
       testparameters:
       - parameter: "eks_version"
@@ -22,26 +25,10 @@ testing:
         values: ["1.2.3","4.5.6"]
   testclouds:
   - cloud: "aws"
-    testplatforms:
-    - platform: "k8s"
-      testparameters:
-      - parameter: "px_version"
-        ignoredefault: false
-        values: ["3.11"]
-    - platform: "eks"
-    - platform: "ocp4"
-      testparameters:
-      - parameter: "px_version"
-        ignoredefault: true
-        values: ["3.10"]
+    platforms: ["k8s","eks","ocp4"]
   - cloud: "azure"
-    testplatforms:
-    - platform: "k8s"
-    - platform: "aks"
+    platforms:  ["k8s","aks"]
   - cloud: "vsphere"
-    testplatforms:
-    - platform: "k8s"
+    platforms:  ["k8s"]
   - cloud: "gcp"
-    testplatforms:
-    - platform: "k8s"
-    - platform: "gke"
+    platforms:  ["k8s","gke"]

@@ -175,7 +175,7 @@ func aws_load_config(config *Config) aws.Config {
 	return cfg
 }
 
-func aws_connect_ec2(config *Config, awscfg *aws.Config) *ec2.Client {
+func aws_connect_ec2(config *Config) *ec2.Client {
 	cfg := aws_load_config(config)
 	client := ec2.NewFromConfig(cfg)
 	return client
@@ -209,7 +209,7 @@ func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
 	return aws_instances, nil
 }
 
-func aws_get_clouddrives(aws_instances_split []([]string), config *Config, client *ec2.Client) ([]string, error) {
+func aws_get_clouddrives(aws_instances_split []([]string), client *ec2.Client) ([]string, error) {
 	var aws_volumes []string
 
 	fmt.Printf("Searching for portworx clouddrive volumes:\n")
@@ -453,7 +453,7 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 	}
 
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		_, err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{
 			LoadBalancerNames: []string{elbName},
 		})
@@ -477,7 +477,7 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 func delete_and_wait_sg(client *ec2.Client, sgName string) {
 	defer wg.Done()
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		_, err := client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
 			//DryRun: aws.Bool(true),
 			GroupId: aws.String(sgName),
@@ -527,7 +527,7 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 	// check if security rule is deleted in API
 	// to be replaced by a waiter as soon as implemented in AWS SDK
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
 			Filters: []types.Filter{
 				{

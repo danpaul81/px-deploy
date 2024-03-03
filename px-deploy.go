@@ -124,8 +124,8 @@ type Testing_Def struct {
 }
 
 type Testing_Cloud struct {
-	Cloud         string
-	TestPlatforms []Testing_Platform
+	Cloud     string
+	Platforms []string
 }
 
 type Testing_Platform struct {
@@ -949,7 +949,7 @@ func run_terraform_apply(config *Config) string {
 		fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
 		return err.Error()
 	} else {
-		if config.DryRun == true {
+		if config.DryRun {
 			fmt.Printf("Dry run only. No deployment on target cloud. Run 'px-deploy destroy -n %s' to remove local files\n", config.Name)
 			return ""
 		}
@@ -967,6 +967,9 @@ func run_terraform_apply(config *Config) string {
 		case "aws":
 			// apply the terraform aws-returns-generated to deployment yml file (maintains compatibility to px-deploy behaviour, maybe not needed any longer)
 			content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/aws-returns-generated.yaml")
+			if err != nil {
+				return err.Error()
+			}
 			file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err.Error()
@@ -979,6 +982,9 @@ func run_terraform_apply(config *Config) string {
 		case "gcp":
 			// apply the terraform gcp-returns-generated to deployment yml file (network name needed for different functions)
 			content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/gcp-returns-generated.yaml")
+			if err != nil {
+				return err.Error()
+			}
 			file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err.Error()
@@ -1045,7 +1051,6 @@ func destroy_deployment(name string, destroyForce bool) {
 	os.Chdir("/px-deploy/.px-deploy")
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
-	var err error
 
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "aws" {
@@ -1055,7 +1060,7 @@ func destroy_deployment(name string, destroyForce bool) {
 		}
 
 		cfg := aws_load_config(&config)
-		client := aws_connect_ec2(&config, &cfg)
+		client := aws_connect_ec2(&config)
 
 		aws_instances, err := aws_get_instances(&config, client)
 		if err != nil {
@@ -1070,7 +1075,7 @@ func destroy_deployment(name string, destroyForce bool) {
 			aws_instances_split[i/197] = append(aws_instances_split[i/197], val)
 		}
 
-		aws_volumes, err := aws_get_clouddrives(aws_instances_split, &config, client)
+		aws_volumes, err := aws_get_clouddrives(aws_instances_split, client)
 		if err != nil {
 			panic(fmt.Sprintf("error listing aws clouddrives %v \n", err.Error()))
 		}
@@ -1155,7 +1160,7 @@ func destroy_deployment(name string, destroyForce bool) {
 
 		prepare_predelete(&config, "script", destroyForce)
 
-		instances, err := gcp_get_instances(config.Name, &config)
+		instances, err := gcp_get_instances(&config)
 		if err != nil {
 			die("error listing gcp instances")
 		}
@@ -1254,9 +1259,7 @@ func destroy_deployment(name string, destroyForce bool) {
 	} else {
 		die("Bad cloud")
 	}
-	if err != nil {
-		die("Failed to destroy")
-	}
+
 	fmt.Print(string(output))
 	os.Remove("deployments/" + name + ".yml")
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name)
@@ -1372,7 +1375,7 @@ func prepare_predelete(config *Config, runtype string, destroyForce bool) {
 	var name_pre, name_post string
 
 	// script predelete only executes if set in config
-	if config.Run_Predelete != true && runtype == "script" {
+	if !config.Run_Predelete && runtype == "script" {
 		return
 	}
 
@@ -1416,7 +1419,7 @@ func prepare_predelete(config *Config, runtype string, destroyForce bool) {
 	close(predelete_status)
 
 	for elem := range predelete_status {
-		if elem.success == false {
+		if !elem.success {
 			if destroyForce {
 				fmt.Printf("%v %v failed %v predelete. --force parmeter set. Continuing delete%v\n", Red, elem.node, runtype, Reset)
 			} else {
@@ -1592,8 +1595,8 @@ func write_nodescripts(config Config) {
 		tf_post_script = nil
 	}
 
-	Clusters, err := strconv.Atoi(config.Clusters)
-	Nodes, err := strconv.Atoi(config.Nodes)
+	Clusters, _ := strconv.Atoi(config.Clusters)
+	Nodes, _ := strconv.Atoi(config.Nodes)
 
 	// loop clusters (masters and nodes) to build tfvars and master/node scripts
 	for c := 1; c <= Clusters; c++ {
@@ -1815,7 +1818,7 @@ func get_version_latest() string {
 		return ""
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	v := strings.TrimSpace(string(body))
 	if regexp.MustCompile(`^[0-9\.]+$`).MatchString(v) {
 		return v

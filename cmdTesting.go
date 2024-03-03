@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -27,9 +26,9 @@ func RunTesting(cmd *cobra.Command, args []string) {
 	// range thru globaltestparameters and add value from defaults.yml if !replace is set
 	// TODO: skip possible double entries
 	//       this can happen when default.yml has same value
-	fmt.Printf("Global Settings for test run: (entries with * being added from defaults.yml, [] indicates double entries)\n")
+	fmt.Printf("global parameter: (* inherit defaults.yml, [] double entries)\n")
 	for k, gtpa := range config_template.Testing.GlobalTestParameters {
-		fmt.Printf("globaltestparameter: %s :", gtpa.Parameter)
+		fmt.Printf("  %s :", gtpa.Parameter)
 		for _, tval := range gtpa.Values {
 			fmt.Printf(" %s", tval)
 		}
@@ -47,8 +46,9 @@ func RunTesting(cmd *cobra.Command, args []string) {
 		fmt.Printf("\n")
 	}
 
+	fmt.Printf("\nplatform settings: (+ inherit global setting, * inherit defaults.yml, [] double entries)\n")
 	for k, globalplatforms := range config_template.Testing.GlobalTestPlatform {
-		fmt.Printf("globaltestplatform : %s\n", globalplatforms.Platform)
+		fmt.Printf(" %s\n", globalplatforms.Platform)
 		for j, globalplatformvalues := range globalplatforms.TestParameters {
 			fmt.Printf("  %s:", globalplatformvalues.Parameter)
 			for _, tval := range globalplatformvalues.Values {
@@ -64,23 +64,49 @@ func RunTesting(cmd *cobra.Command, args []string) {
 						fmt.Printf(" [%s*]", defVal)
 					}
 				}
-				fmt.Printf("\n")
 			}
+
+			for _, gtpa := range config_template.Testing.GlobalTestParameters {
+				if strings.EqualFold(gtpa.Parameter, globalplatformvalues.Parameter) {
+					//fmt.Printf(" match %s", gtpa.Parameter)
+					for _, gtpv := range gtpa.Values {
+						if !slices.Contains(config_template.Testing.GlobalTestPlatform[k].TestParameters[j].Values, gtpv) {
+							fmt.Printf(" %s+", gtpv)
+							config_template.Testing.GlobalTestPlatform[k].TestParameters[j].Values = append(config_template.Testing.GlobalTestPlatform[k].TestParameters[j].Values, gtpv)
+						} else {
+							fmt.Printf(" [%s+]", gtpv)
+						}
+					}
+				}
+			}
+			fmt.Printf("\n")
 		}
 	}
 
 	for _, tcv := range config_template.Testing.TestClouds {
-		fmt.Printf("cloud %s\n", tcv.Cloud)
-		for _, tcp := range tcv.TestPlatforms {
-			fmt.Printf("  platform %s\n", tcp.Platform)
-			for _, tcpa := range tcp.TestParameters {
-				fmt.Printf("    parameter: %s :", tcpa.Parameter)
-				for _, tval := range tcpa.Values {
-					fmt.Printf(" %s ", tval)
+		fmt.Printf("\n cloud %s\n", tcv.Cloud)
+		for _, tcp := range tcv.Platforms {
+			fmt.Printf("  platform %s\n", tcp)
+
+			// check if for this platform there is a specific override
+			// e.g. px_version set in global test parameters AND in global platform setting
+			// if yes, take the values from the global platform settings
+			// otherwise take from global setting
+			for _, gtpa := range config_template.Testing.GlobalTestParameters {
+				for _, gppa := range config_template.Testing.GlobalTestPlatform {
+					if gppa.Platform == tcp {
+						for _, gpval := range gppa.TestParameters {
+							fmt.Printf("    setting %s\n", gpval.Parameter)
+							if gpval.Parameter == gtpa.Parameter {
+								fmt.Printf("    found override for platform %s\n", gppa.Platform)
+							}
+						}
+					}
 				}
-				fmt.Printf("\n")
+
 			}
 		}
+
 	}
 
 	//prep_error := prepare_deployment(&config, &flags, testingName, "", testingTemplate, "")
@@ -94,7 +120,7 @@ func getDefaultValue(field string, config *Config) string {
 	refConf := reflect.ValueOf(*config)
 	typeOfC := refConf.Type()
 	for i := 0; i < refConf.NumField(); i++ {
-		if strings.ToLower(typeOfC.Field(i).Name) == strings.ToLower(field) {
+		if strings.EqualFold(typeOfC.Field(i).Name, field) {
 			//fmt.Printf("found field %s in defaults\n", refConf.Field(i).Interface())
 			return fmt.Sprintf("%s", refConf.Field(i).Interface())
 		}
