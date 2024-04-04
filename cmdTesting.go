@@ -46,7 +46,7 @@ func RunTesting(cmd *cobra.Command, args []string) {
 		fmt.Printf("\n")
 	}
 
-	fmt.Printf("\nplatform settings: (+ inherit global setting, * inherit defaults.yml, [] double entries)\n")
+	fmt.Printf("\nplatform settings: (+ inherit global parameter, * inherit from defaults.yml, [] double entries)\n")
 	for k, globalplatforms := range config_template.Testing.GlobalTestPlatform {
 		fmt.Printf(" %s\n", globalplatforms.Platform)
 		for j, globalplatformvalues := range globalplatforms.TestParameters {
@@ -84,27 +84,33 @@ func RunTesting(cmd *cobra.Command, args []string) {
 	}
 
 	for _, tcv := range config_template.Testing.TestClouds {
-		fmt.Printf("\n cloud %s\n", tcv.Cloud)
+		//fmt.Printf("\n cloud %s\n", tcv.Cloud)
 		for _, tcp := range tcv.Platforms {
-			fmt.Printf("  platform %s\n", tcp)
+			fmt.Printf("%s\t%s\n", tcv.Cloud, tcp)
 
 			// check if for this platform there is a specific override
 			// e.g. px_version set in global test parameters AND in global platform setting
 			// if yes, take the values from the global platform settings
 			// otherwise take from global setting
-			for _, gtpa := range config_template.Testing.GlobalTestParameters {
-				for _, gppa := range config_template.Testing.GlobalTestPlatform {
-					if gppa.Platform == tcp {
-						for _, gpval := range gppa.TestParameters {
-							fmt.Printf("    setting %s\n", gpval.Parameter)
-							if gpval.Parameter == gtpa.Parameter {
-								fmt.Printf("    found override for platform %s\n", gppa.Platform)
-							}
+			//for _, gtpa := range config_template.Testing.GlobalTestParameters {
+			//	fmt.Printf(" glob %s\n", gtpa.Parameter)
+			for _, gppa := range config_template.Testing.GlobalTestPlatform {
+				if gppa.Platform == tcp {
+					for _, gpval := range gppa.TestParameters {
+
+						fmt.Printf("    setting %s\n", gpval.Parameter)
+						for _, gtpa := range config_template.Testing.GlobalTestParameters {
+							fmt.Printf("   g setting %s\n", gtpa.Parameter)
 						}
+						//if gpval.Parameter == gtpa.Parameter {
+						//	fmt.Printf("      found g %s override for platform %s\n", gtpa.Parameter, gppa.Platform)
+						//		platform_override = true
+						//}
 					}
 				}
-
 			}
+
+			//}
 		}
 
 	}

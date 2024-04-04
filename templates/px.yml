@@ -5,7 +5,7 @@ testing:
   #these will be run on all cloud/platforms
   globaltestparameters:
   - parameter: "px_version"
-    #if true this will replace values in defaults.yml, if false it will be added
+    #true will ignore value from defaults.yml, false will add value from default.yml
     ignoredefault: false
     values: ["2.13.5","3.1.0","3.0.4"]
   #these will be run on all matching platforms
@@ -23,6 +23,9 @@ testing:
       - parameter: "eks_version"
         ignoredefault: false
         values: ["1.2.3","4.5.6"]
+  #    - parameter: "px_version"
+  #      ignoredefault: false
+  #      values: ["4.1.0"]
   testclouds:
   - cloud: "aws"
     platforms: ["k8s","eks","ocp4"]
