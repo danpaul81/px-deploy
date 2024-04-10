@@ -46,7 +46,7 @@ func RunTesting(cmd *cobra.Command, args []string) {
 		fmt.Printf("\n")
 	}
 
-	fmt.Printf("\nplatform settings: (+ inherit global parameter, * inherit from defaults.yml, [] double entries)\n")
+	fmt.Printf("\nplatform specific settings: (+ inherit global parameter, * inherit from defaults.yml, [] double entries)\n")
 	for k, globalplatforms := range config_template.Testing.GlobalTestPlatform {
 		fmt.Printf(" %s\n", globalplatforms.Platform)
 		for j, globalplatformvalues := range globalplatforms.TestParameters {
