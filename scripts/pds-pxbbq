@@ -19,7 +19,7 @@ PDS_PASSWORD=""
 name="dpaul-pds"
 cluster=1
 # platform="ocp4"
-PDS_ENDPOINT="https://gold.pds.portworx.com"
+PDS_ENDPOINT="https://cloud.portworx.io"
 PDS_NAMESPACE="pds-pxbbq"
 PDS_DATASERVICE="mdb"
 PDS_DATASERVICE_VERSION="7.0.11"
@@ -122,16 +122,16 @@ TOTAL_RECORDS=$(echo $OUTPUT  | jq -r '.pagination.totalRecords' )
 echo "PDS_NAMESPACE_UID=$PDS_NAMESPACE_UID"
 
 echo "retreiving pds template revision uid"
-OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/core/v1/templates:search" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
-{"tenantId":"'$PDS_TENANT_UID'","infraResourceSelector":{"infraResourceFilters":[]},"fieldSelector":{"filters":[{"key":"config.kind","op":"IN","values":["pds:resource_settings"]}]},"applicationSelector":{"applicationFilters":[]},"sort":{"sortBy":"CREATED_AT","sortOrder":"DESC"},"pagination":{"pageNumber":"1","pageSize":"5"}}
+OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/pds/v1/catalog/templateDefinition/revisions:search" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
+{"fieldSelector":{"filters":[{"key":"name","op":"IN","values":["pds:resource_settings"]}]},"sort":{"sortBy":"CREATED_AT","sortOrder":"DESC"},"pagination":{"pageNumber":"1","pageSize":"10"}}
 ')
-PDS_RESOURCE_TEMPLATE_REVISION_UID=$(echo $OUTPUT  | jq -r '.templates[0].config.revisionUid' )
+PDS_RESOURCE_TEMPLATE_REVISION_UID=$(echo $OUTPUT  | jq -r '.revisions[0].meta.uid' )
 [[ $PDS_RESOURCE_TEMPLATE_REVISION_UID == "null" ]] && { echo "Error getting resource template revision uid"; echo $OUTPUT; exit 1; }
 echo "PDS_RESOURCE_TEMPLATE_REVISION_UID=$PDS_RESOURCE_TEMPLATE_REVISION_UID"
 
 echo "creating resource template"
 OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/core/v1/tenants/$PDS_TENANT_UID/templates" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
-{"meta":{"name":"'$name'-'$cluster'-small"},"config":{"templateValues":{"name":"'$name'-'$cluster'-small","cpu_request":"1","cpu_limit":"2","memory_request":"100M","memory_limit":"200M","storage_request":"10G"}, "revisionUid":"'$PDS_RESOURCE_TEMPLATE_REVISION_UID'"}}
+{"meta":{"name":"'$name'-'$cluster'-small"},"config":{"templateValues":{"name":"'$name'-'$cluster'-small","cpu_request":"100m","cpu_limit":"500m","memory_request":"50M","memory_limit":"500M","storage_request":"10G"}, "revisionUid":"'$PDS_RESOURCE_TEMPLATE_REVISION_UID'"}}
 ')
 PDS_RESOURCE_TEMPLATE_UID=$(echo $OUTPUT  | jq -r '.meta.uid' )
 [[ $PDS_RESOURCE_TEMPLATE_UID == "null" ]] && { echo "Error creating resource template"; echo $OUTPUT; exit 1; }
@@ -141,10 +141,10 @@ echo 'echo "Deleting resource template '$name'-'$cluster'-small"' >> $DELETE_SCR
 echo 'curl -s -X "DELETE" "'$PDS_ENDPOINT'/core/v1/templates/'$PDS_RESOURCE_TEMPLATE_UID'" -H "accept: application/json" -H "px-account-id: '$PDS_ACCOUNT_ID'" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json"' >> $DELETE_SCRIPT
 
 echo "retreiving app (mongodb) template revision uid"
-OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/core/v1/templates:search" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
-{"tenantId":"'$PDS_TENANT_UID'","infraResourceSelector":{"infraResourceFilters":[]},"fieldSelector":{"filters":[{"key":"config.kind","op":"IN","values":["pds:service_configurations:mongodbs"]}]},"applicationSelector":{"applicationFilters":[]},"sort":{"sortBy":"CREATED_AT","sortOrder":"DESC"},"pagination":{"pageNumber":"1","pageSize":"5"}}
+OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/pds/v1/catalog/templateDefinition/revisions:search" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
+{"fieldSelector":{"filters":[{"key":"name","op":"IN","values":["pds:service_configurations:mongodbs"]}]},"sort":{"sortBy":"CREATED_AT","sortOrder":"DESC"},"pagination":{"pageNumber":"1","pageSize":"10"}}
 ')
-PDS_APP_TEMPLATE_REVISION_UID=$(echo $OUTPUT  | jq -r '.templates[0].config.revisionUid' )
+PDS_APP_TEMPLATE_REVISION_UID=$(echo $OUTPUT  | jq -r '.revisions[0].meta.uid' )
 [[ $PDS_APP_TEMPLATE_REVISION_UID == "null" ]] && { echo "Error getting app (mongodb) template revision uid"; echo $OUTPUT; exit 1; }
 echo "PDS_APP_TEMPLATE_REVISION_UID=$PDS_APP_TEMPLATE_REVISION_UID"
 
@@ -160,10 +160,10 @@ echo 'echo "Deleting data service config template '$name'-'$cluster'-mongo"' >> 
 echo 'curl -s -X "DELETE" "'$PDS_ENDPOINT'/core/v1/templates/'$PDS_APP_TEMPLATE_UID'" -H "accept: application/json" -H "px-account-id: '$PDS_ACCOUNT_ID'" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json"' >> $DELETE_SCRIPT
 
 echo "retreiving storage template revision uid"
-OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/core/v1/templates:search" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
-{"tenantId":"'$PDS_TENANT_UID'","infraResourceSelector":{"infraResourceFilters":[]},"fieldSelector":{"filters":[{"key":"config.kind","op":"IN","values":["pds:storage_options"]}]},"applicationSelector":{"applicationFilters":[]},"sort":{"sortBy":"CREATED_AT","sortOrder":"DESC"},"pagination":{"pageNumber":"1","pageSize":"5"}}
+OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/pds/v1/catalog/templateDefinition/revisions:search" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
+{"fieldSelector":{"filters":[{"key":"name","op":"IN","values":["pds:storage_options"]}]},"sort":{"sortBy":"CREATED_AT","sortOrder":"DESC"},"pagination":{"pageNumber":"1","pageSize":"10"}}
 ')
-PDS_STORAGE_TEMPLATE_REVISION_UID=$(echo $OUTPUT  | jq -r '.templates[0].config.revisionUid' )
+PDS_STORAGE_TEMPLATE_REVISION_UID=$(echo $OUTPUT  | jq -r '.revisions[0].meta.uid' )
 [[ $PDS_STORAGE_TEMPLATE_REVISION_UID == "null" ]] && { echo "Error getting storage template revision uid"; echo $OUTPUT; exit 1; }
 echo "PDS_STORAGE_TEMPLATE_REVISION_UID=$PDS_STORAGE_TEMPLATE_REVISION_UID"
 
@@ -189,6 +189,35 @@ echo "PDS_PROJECT_UID=$PDS_PROJECT_UID"
 # add deletion command
 echo 'echo "Deleting project '$name'-'$cluster'"' >> $DELETE_SCRIPT
 echo 'curl -s -X "DELETE" "'$PDS_ENDPOINT'/core/v1/projects/'$PDS_PROJECT_UID'" -H "accept: application/json" -H "px-account-id: '$PDS_ACCOUNT_ID'" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json"' >> $DELETE_SCRIPT
+
+echo "retrieving dataservice ($PDS_DATASERVICE) uid"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/pds/v1/catalog/dataServices?enabled=TRUE&sort.sortBy=NAME&sort.sortOrder=ASC&pagination.pageNumber=1&pagination.pageSize=50"  -H "px-account-id: $PDS_ACCOUNT_ID" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DATASERVICE_UID=$(echo $OUTPUT | jq -r '.dataServices[] | select(.info.shortName=="'$PDS_DATASERVICE'") | .meta.uid')
+[[ $PDS_DATASERVICE_UID == "null" ]] && { echo "Error: PDS_DATASERVICE_UID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DATASERVICE_UID=$PDS_DATASERVICE_UID"
+
+echo "retrieving dataservice $PDS_DATASERVICE version $PDS_DATASERVICE_VERSION uid"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/pds/v1/catalog/dataServices/$PDS_DATASERVICE_UID/dataServiceVersions?enabled=TRUE&sort.sortBy=NAME&sort.sortOrder=DESC&pagination.pageNumber=1&pagination.pageSize=50"  -H "px-account-id: $PDS_ACCOUNT_ID" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DATASERVICE_VERSION_UID=$(echo $OUTPUT | jq -r '.dataServiceVersions[] | select(.meta.name=="'$PDS_DATASERVICE_VERSION'") | .meta.uid')
+[[ $PDS_DATASERVICE_VERSION_UID == "null" ]] && { echo "Error: PDS_DATASERVICE_VERSION_UID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DATASERVICE_VERSION_UID=$PDS_DATASERVICE_VERSION_UID"
+
+echo "retrieving latest dataservice $PDS_DATASERVICE version $PDS_DATASERVICE_VERSION image uid"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/pds/v1/catalog/images?dataServiceVersionId=$PDS_DATASERVICE_VERSION_UID&enabled=1&sort.sortBy=CREATED_AT&sort.sortOrder=DESC&pagination.pageNumber=1&pagination.pageSize=50"  -H "px-account-id: $PDS_ACCOUNT_ID" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DATASERVICE_IMAGE_UID=$(echo $OUTPUT | jq -r '.images[0].meta.uid')
+[[ $PDS_DATASERVICE_IMAGE_UID == "null" ]] && { echo "Error: PDS_DATASERVICE_IMAGE_UID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DATASERVICE_IMAGE_UID=$PDS_DATASERVICE_IMAGE_UID"
+
+echo "creating deployment"
+OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/pds/v1/namespaces/$PDS_NAMESPACE_UID/dataServiceDeployments" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
+{"projectId":"'$PDS_PROJECT_UID'","dataServiceDeployment":{"meta":{"name":"px-deploy-'$name'-'$cluster'","labels":{},"annotations":{}},"config":{"references":{"imageId":"'$PDS_DATASERVICE_IMAGE_UID'"},"tlsConfig":{"enabled":false,"issuerName":""},"dataServiceDeploymentTopologies":[{"name":"px-deploy-'$name'-'$cluster'","instances":"1","serviceType":"ClusterIP","resourceSettings":{"id":"'$PDS_RESOURCE_TEMPLATE_UID'"},"serviceConfigurations":{"id":"'$PDS_APP_TEMPLATE_UID'","values":{}},"storageOptions":{"id":"'$PDS_STORAGE_TEMPLATE_UID'"}}]}}}
+')
+PDS_DEPLOYMENT_UID=$(echo $OUTPUT  | jq -r '.meta.uid' )
+[[ $PDS_DEPLOYMENT_UID == "null" ]] && { echo "Error creating project"; echo $OUTPUT; exit 1; }
+echo "PDS_DEPLOYMENT_UID=$PDS_DEPLOYMENT_UID"
+# add deletion command
+echo 'echo "Deleting deployment '$name'-'$cluster'"' >> $DELETE_SCRIPT
+echo 'curl -s -X "DELETE" "'$PDS_ENDPOINT'/pds/v1/dataServiceDeployments/'$PDS_DEPLOYMENT_UID'?force=false" -H "accept: application/json" -H "px-account-id: '$PDS_ACCOUNT_ID'" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json"' >> $DELETE_SCRIPT
 
 
 exit
