@@ -210,7 +210,18 @@ echo "PDS_DATASERVICE_IMAGE_UID=$PDS_DATASERVICE_IMAGE_UID"
 
 echo "creating deployment"
 OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/pds/v1/namespaces/$PDS_NAMESPACE_UID/dataServiceDeployments" -H "accept: application/json" -H "px-account-id: $PDS_ACCOUNT_ID" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '
-{"projectId":"'$PDS_PROJECT_UID'","dataServiceDeployment":{"meta":{"name":"px-deploy-'$name'-'$cluster'","labels":{},"annotations":{}},"config":{"references":{"imageId":"'$PDS_DATASERVICE_IMAGE_UID'"},"tlsConfig":{"enabled":false,"issuerName":""},"dataServiceDeploymentTopologies":[{"name":"px-deploy-'$name'-'$cluster'","instances":"1","serviceType":"ClusterIP","resourceSettings":{"id":"'$PDS_RESOURCE_TEMPLATE_UID'"},"serviceConfigurations":{"id":"'$PDS_APP_TEMPLATE_UID'","values":{}},"storageOptions":{"id":"'$PDS_STORAGE_TEMPLATE_UID'"}}]}}}
+{"projectId":"'$PDS_PROJECT_UID'","dataServiceDeployment":
+{"meta":{"name":"px-deploy-'$name'-'$cluster'","labels":{},"annotations":{}},
+"config":{"references":{
+"imageId":"'$PDS_DATASERVICE_IMAGE_UID'"},
+"tlsConfig":{"enabled":false,"issuerName":""},
+"dataServiceDeploymentTopologies":[
+{"name":"px-deploy-'$name'-'$cluster'",
+"instances":"1",
+"serviceType":"ClusterIP",
+"resourceSettings":{"id":"'$PDS_RESOURCE_TEMPLATE_UID'"},
+"serviceConfigurations":{"id":"'$PDS_APP_TEMPLATE_UID'","values":{}},
+"storageOptions":{"id":"'$PDS_STORAGE_TEMPLATE_UID'"}}]}}}
 ')
 PDS_DEPLOYMENT_UID=$(echo $OUTPUT  | jq -r '.meta.uid' )
 [[ $PDS_DEPLOYMENT_UID == "null" ]] && { echo "Error creating project"; echo $OUTPUT; exit 1; }
