@@ -309,8 +309,8 @@ EOF
       quantity = 1
       drain_before_delete = false
       machine_config {
-        kind = rancher2_machine_config_v2.node[each.key].kind
-        name = rancher2_machine_config_v2.node[each.key].name
+        kind = rancher2_machine_config_v2.cp[each.key].kind
+        name = rancher2_machine_config_v2.cp[each.key].name
       }
     }
     machine_pools {
@@ -349,4 +349,123 @@ resource "null_resource" "rancher_copy_kubeconfig" {
     host = aws_instance.node["master-${each.key}-1"].public_ip
     private_key = tls_private_key.ssh.private_key_openssh
     }
+}
+
+
+resource "aws_iam_policy" "rke2-cp-policy" {
+  name = format("cp-policy-%s-%s",var.name_prefix,var.config_name)
+  description = "portworx rke2 cp policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+            Sid = "" 
+            Effect = "Allow"
+            Action = [
+      "autoscaling:DescribeAutoScalingGroups",
+      "autoscaling:DescribeLaunchConfigurations",
+      "autoscaling:DescribeTags",
+      "ec2:DescribeInstances",
+      "ec2:DescribeRegions",
+      "ec2:DescribeRouteTables",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeVolumes",
+      "ec2:CreateSecurityGroup",
+      "ec2:CreateTags",
+      "ec2:CreateVolume",
+      "ec2:ModifyInstanceAttribute",
+      "ec2:ModifyVolume",
+      "ec2:AttachVolume",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:CreateRoute",
+      "ec2:DeleteRoute",
+      "ec2:DeleteSecurityGroup",
+      "ec2:DeleteVolume",
+      "ec2:DetachVolume",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:DescribeVpcs",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:AttachLoadBalancerToSubnets",
+      "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:CreateLoadBalancerPolicy",
+      "elasticloadbalancing:CreateLoadBalancerListeners",
+      "elasticloadbalancing:ConfigureHealthCheck",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteLoadBalancerListeners",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DetachLoadBalancerFromSubnets",
+      "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+      "elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeLoadBalancerPolicies",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:RegisterTargets",
+      "elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
+      "iam:CreateServiceLinkedRole",
+      "kms:DescribeKey"
+            ]
+            Resource = "*"
+        }]
+  })
+}
+
+resource "aws_iam_role" "rke2-cp" {
+  name = format("%s-%s-rke2-cp",var.name_prefix,var.config_name)
+
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+    Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "rke2-pol-attach" {
+  role       = aws_iam_role.rke2-cp.name
+  policy_arn = aws_iam_policy.rke2-cp-policy.arn
+}
+
+resource "aws_iam_instance_profile" "rke2-cp_profile" {
+	name = format("%s-%s-rke2-cc-prof",var.name_prefix,var.config_name)
+	role = aws_iam_role.rke2-cp.name
+}
+
+resource "rancher2_machine_config_v2" "cp" {
+  for_each = var.rancherclusters
+  depends_on = [
+    helm_release.rancher_server,
+    rancher2_cloud_credential.aws
+  ]
+  provider = rancher2.admin
+  generate_name = format("cc-templ-%s",each.key)
+  amazonec2_config {
+    ami =  data.aws_ami.ubuntu.id
+    root_size = "50"
+    region = var.aws_region
+    instance_type = each.value
+    iam_instance_profile = aws_iam_instance_profile.rke2-cp_profile.name
+    security_group = [aws_security_group.sg_px-deploy.name]
+    subnet_id = aws_subnet.subnet[each.key - 1].id
+    vpc_id = aws_vpc.vpc.id
+    zone = data.aws_availability_zone.rancher[each.key].name_suffix
+    tags= join(",", formatlist("%s,%s", keys(var.aws_tags), values(var.aws_tags)))
+    userdata = format("#cloud-config\nssh_authorized_keys:\n  - %s\n", tls_private_key.ssh.public_key_openssh)
+  }
 }
