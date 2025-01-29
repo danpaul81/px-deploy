@@ -326,6 +326,11 @@ EOF
         name = rancher2_machine_config_v2.node[each.key].name
       }
     }
+    machine_selector_config {
+      config = <<EOF
+cloud-provider-name: "aws"
+EOF
+    }
   }  
 }
 
@@ -385,6 +390,7 @@ resource "aws_iam_policy" "rke2-cp-policy" {
       "ec2:DetachVolume",
       "ec2:RevokeSecurityGroupIngress",
       "ec2:DescribeVpcs",
+      "ec2:DescribeAvailabilityZones",
       "elasticloadbalancing:AddTags",
       "elasticloadbalancing:AttachLoadBalancerToSubnets",
       "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
