@@ -52,6 +52,7 @@ type Config struct {
 	Post_Script              string
 	DryRun                   bool
 	NoSync                   bool
+	IgnoreVersion            bool
 	Lock                     bool
 	Aws_Type                 string
 	Aws_Ebs                  string
@@ -157,7 +158,13 @@ func main() {
 		Long:  "Creates a deployment",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			fmt.Printf("%v%v", check_version(), Reset)
+			if !latest_version() {
+				if flags.IgnoreVersion {
+					fmt.Println("ignore_version set. Please update to latest release.")
+				} else {
+					die("Please update to latest release. (use --ignore_version to continue)")
+				}
+			}
 			if len(args) > 0 {
 				die("Invalid arguments")
 			}
@@ -449,6 +456,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&flags.DryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
 	cmdCreate.Flags().BoolVarP(&flags.NoSync, "no_sync", "", false, "do not sync assets/infra/scripts/templates from container to local dir, allows to change local scripts")
+	cmdCreate.Flags().BoolVarP(&flags.IgnoreVersion, "ignore_version", "", false, "ignore if not running the latest px-deploy release")
 	cmdCreate.Flags().BoolVarP(&flags.Lock, "lock", "", false, "protect deployment from deletion. run px-deploy unlock -n ... before deletion")
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().BoolVarP(&destroyClear, "clear", "c", false, "destroy local deployment files (use with caution!)")
@@ -2010,16 +2018,19 @@ func write_tf_file(deployment string, filename string, data []string) {
 		}
 	}
 }
-func check_version() string {
+func latest_version() bool {
 	version_current := get_version_current()
 	version_latest := get_version_latest()
 	if version_latest == "" {
-		return fmt.Sprintln(Yellow + "Current version is " + version_current + ", cannot determine latest version")
+		fmt.Println(Yellow + "Current version is " + version_current + ", cannot determine latest version" + Reset)
+		return true
 	} else {
 		if version_current != version_latest {
-			return fmt.Sprintln(Yellow + "Current version is " + version_current + ", latest version is " + version_latest)
+			fmt.Println(Yellow + "Current version is " + version_current + ", latest version is " + version_latest + Reset)
+			return false
 		} else {
-			return fmt.Sprintln(Green + "Current version is " + version_current + " (latest)")
+			fmt.Println(Green + "Current version is " + version_current + " (latest)" + Reset)
+			return true
 		}
 	}
 }
@@ -2048,11 +2059,11 @@ func get_version_latest() string {
 
 func check_for_recommended_settings(config *Config) {
 	// check for "recommended" version in default.yaml.[version_current]
-	if _, err := os.Stat("defaults.yml." + get_version_current()); os.IsNotExist(err) {
-		fmt.Printf("%sdefaults.yml.%s not found. No recommended versions available to be shown%s \n", Yellow, get_version_current(), Reset)
+	if _, err := os.Stat("versions.yml"); os.IsNotExist(err) {
+		fmt.Printf("%sversions.yml not found. No recommended versions available to be shown%s \n", Yellow, Reset)
 	} else {
-		fmt.Printf("checking your defaults.yml for recommended version settings (from defaults.yml.%s) \n", get_version_current())
-		recommended_versions := parse_yaml(fmt.Sprintf("defaults.yml.%s", get_version_current()))
+		fmt.Printf("checking your defaults.yml for recommended version settings (from versions.yml) \n")
+		recommended_versions := parse_yaml("versions.yml")
 		recVers := reflect.ValueOf(recommended_versions)
 		curDef := reflect.ValueOf(config)
 		typeOfS := recVers.Type()
@@ -2090,7 +2101,7 @@ func check_for_recommended_settings(config *Config) {
 
 func sync_repository() {
 	fmt.Printf("syncing container repo to local dir\n")
-	cmd := exec.Command("rsync", "-a", "/px-deploy/assets", "/px-deploy/scripts", "/px-deploy/templates", "/px-deploy/infra", "/px-deploy/.px-deploy/")
+	cmd := exec.Command("rsync", "-a", "/px-deploy/assets", "/px-deploy/scripts", "/px-deploy/templates", "/px-deploy/infra", "/px-deploy/versions.yml", "/px-deploy/.px-deploy/")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	errapply := cmd.Run()
