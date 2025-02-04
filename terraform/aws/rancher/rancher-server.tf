@@ -302,6 +302,9 @@ resource "rancher2_cluster_v2" "rancher-cluster" {
   enable_network_policy = false
   rke_config {
         machine_global_config = <<EOF
+disable:
+  - rke2-ingress-nginx
+  - rke2-metrics-server
 cni: "flannel"
 disable-kube-proxy: false
 etcd-expose-metrics: false
@@ -332,11 +335,11 @@ EOF
         name = rancher2_machine_config_v2.node[each.key].name
       }
     }
-    machine_selector_config {
-      config = <<EOF
-cloud-provider-name: "aws"
-EOF
-    }
+//    machine_selector_config {
+//      config = <<EOF
+//cloud-provider-name: "external"
+//EOF
+//    }
   }  
 }
 
