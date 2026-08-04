@@ -5,6 +5,7 @@ cat <<EOF >>/etc/skel/.bashrc
 alias k=kubectl
 complete -F __start_kubectl k
 PS1='\e[0;33m[\u@px-training \W]\$ \e[m'
+tty &>/dev/null && cat /tmp/motd.\$(id -nu | sed s/training//)
 EOF
 
 # Create training users
@@ -17,10 +18,14 @@ done
 # Install pxctl
 cp /assets/pxctl.sh /usr/bin/pxctl
 
-# Collect kubeconfigs
+# Collect kubeconfigs and motds
 for i in $(seq 1 $clusters); do
   echo trying to copy kubeconfig from cluster $i
   while ! scp master-$i:.kube/config /home/training$i/.kube/config; do
+    sleep 2
+  done
+  echo trying to copy motd from cluster $i
+  while ! scp master-$i:/etc/motd /tmp/motd.$i; do
     sleep 2
   done
   chown training$i.training$i /home/training$i/.kube/config
