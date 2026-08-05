@@ -7,4 +7,5 @@ metadata:
 parameters:
   repl: "2"
 provisioner: pxd.portworx.com
+volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
