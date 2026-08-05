@@ -50,3 +50,27 @@ Admin User Name: kubeadmin
 Password: $CRED
 +================================================+
 EOF
+
+# set ocp ui console banner color
+case "$cluster" in
+  1) bgcolor='#fe5000' ;;  # orange
+  2) bgcolor='#40b605' ;;  # green
+  3) bgcolor='#0074d9' ;;  # blue
+  4) bgcolor='#8e44ad' ;;  # purple
+  5) bgcolor='#ffdc00' ;;  # yellow
+  6) bgcolor='#ff4136' ;;  # red
+  7) bgcolor='#7fdbff' ;;  # light blue
+  8) bgcolor='#145a32' ;;  # dark green
+esac
+
+cat <<EOF | kubectl apply -f -
+apiVersion: console.openshift.io/v1
+kind: ConsoleNotification
+metadata:
+  name: clusternumber
+spec:
+  text: cluster-$cluster
+  location: BannerTop
+  color: '#fff'
+  backgroundColor: '$bgcolor'
+EOF
