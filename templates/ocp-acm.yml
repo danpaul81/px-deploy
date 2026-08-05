@@ -9,8 +9,8 @@ cluster:
   - id: 1
     scripts: ["ocp-acm"]
   - id: 2
-    scripts: ["install-px", "licenses", "ocp-acm-patch"]
+    scripts: ["install-px", "licenses"]
   - id: 3
-    scripts: ["install-px", "licenses", "ocp-acm-patch"]
+    scripts: ["install-px", "licenses"]
 env:
   cloud_drive: "type%3Dgp2%2Csize%3D150"
