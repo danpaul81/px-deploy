@@ -1,2 +1,0 @@
-# Delete AWS keys
-rm -f /root/.aws/credentials
