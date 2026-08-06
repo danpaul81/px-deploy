@@ -258,8 +258,6 @@ spec:
           set -euxo pipefail
 
           echo "Step 0: wait for Guacamole to be up"
-
-          # Simple readiness loop
           for i in $(seq 1 30); do
             if curl -sSf http://guacamole:8080/guacamole/ >/dev/null 2>&1; then
               echo "Guacamole is responding"
@@ -270,14 +268,11 @@ spec:
           done
 
           echo "Step 1: getting token"
-
           TOKEN_JSON=$(curl -sSf -X POST \
             http://guacamole:8080/guacamole/api/tokens \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "username=guacadmin" \
             --data-urlencode "password=guacadmin")
-
-          echo "RAW TOKEN RESPONSE: $TOKEN_JSON"
 
           TOKEN=$(echo "$TOKEN_JSON" | sed -n 's/.*"authToken":"\([^"]*\)".*/\1/p')
 
@@ -286,40 +281,77 @@ spec:
             exit 1
           fi
 
-          echo "PARSED TOKEN: $TOKEN"
-
           echo "Step 2: nodes"
           kubectl get nodes
 
-          echo "Step 3: loop over node InternalIP addresses"
-
+          echo "Step 3: loop over node InternalIP addresses, create connections and users"
           n=1
           for NODE in $(kubectl get nodes -l node-role.kubernetes.io/worker=worker -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'); do
+            
+            # --- A. Create the Connection ---
             echo "Creating connection for NODE=$NODE"
-            PAYLOAD=$(cat <<EOF
-          {
-            "name": "Student-$n",
-            "parentIdentifier": "ROOT",
-            "protocol": "vnc",
-            "parameters": {
-              "hostname": "$NODE",
-              "port": "5901",
-              "enable-audio": "false",
-              "cursor": "local",
-              "password": "pureuser"
-            },
-            "attributes": {
-              "max-connections": "1",
-              "max-connections-per-user": "1"
+            CONN_PAYLOAD=$(cat <<EOF
+            {
+              "name": "Student-$n",
+              "parentIdentifier": "ROOT",
+              "protocol": "vnc",
+              "parameters": {
+                "hostname": "$NODE",
+                "port": "5901",
+                "enable-audio": "false",
+                "cursor": "local",
+                "password": "pureuser"
+              },
+              "attributes": {
+                "max-connections": "1",
+                "max-connections-per-user": "1"
+              }
             }
-          }
+          EOF
+          )
+            CONN_RESP=$(curl -sSf -X POST \
+              "http://guacamole:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$CONN_PAYLOAD")
+            
+            # Extract the newly created connection's ID
+            CONN_ID=$(echo "$CONN_RESP" | sed -n 's/.*"identifier":"\([^"]*\)".*/\1/p')
+            echo "Created connection $CONN_ID for $NODE"
+
+            # --- B. Create the User ---
+            # NOTE: Password defaults to "password$n" (e.g., password1, password2). 
+            USER_PAYLOAD=$(cat <<EOF
+            {
+              "username": "student$n",
+              "password": "password$n",
+              "attributes": {}
+            }
           EOF
           )
             curl -sSf -X POST \
-              "http://guacamole:8080/guacamole/api/session/data/postgresql/connections?token=$TOKEN" \
+              "http://guacamole:8080/guacamole/api/session/data/postgresql/users?token=$TOKEN" \
               -H "Content-Type: application/json" \
-              -d "$PAYLOAD"
-            echo "Created connection for $NODE"
+              -d "$USER_PAYLOAD"
+            echo "Created user student$n"
+
+            # --- C. Map the Connection to the User ---
+            PERM_PAYLOAD=$(cat <<EOF
+            [
+              {
+                "op": "add",
+                "path": "/connectionPermissions/$CONN_ID",
+                "value": "READ"
+              }
+            ]
+          EOF
+          )
+            curl -sSf -X PATCH \
+              "http://guacamole:8080/guacamole/api/session/data/postgresql/users/student$n/permissions?token=$TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$PERM_PAYLOAD"
+            
+            echo "Assigned connection $CONN_ID exclusively to student$n"
+
             n=$[$n+1]
           done
 ---
