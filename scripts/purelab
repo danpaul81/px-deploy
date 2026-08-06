@@ -106,8 +106,8 @@ EOF
 
 mkdir /root/support
 cd /root/support
-logs="PEAK-M20-ct0-logs.zip PEAK-M20-ct1-logs.zip mucfbs-logs.zip"
-files="purediag busymeter.html busymeter_process perf_report purebusymeter"
+logs="log_bundle_ct0.zip log_bundle_ct1.zip fb-logs.zip"
+files="purediag puremagic busymeter.html busymeter_process perf_report purebusymeter"
 for i in $logs $files; do
   aws s3 cp s3://peak-purelab/$i .
 done
