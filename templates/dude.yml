@@ -10,4 +10,4 @@ cluster:
 - id: 1
   scripts: ["wetty"]
 env:
-  pxb_version: "2.10.2"
+  pxb_version: "2.11.0"
