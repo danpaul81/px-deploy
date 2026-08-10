@@ -303,8 +303,8 @@ spec:
                 "password": "pureuser"
               },
               "attributes": {
-                "max-connections": "1",
-                "max-connections-per-user": "1"
+                "max-connections": "20",
+                "max-connections-per-user": "3"
               }
             }
           EOF
