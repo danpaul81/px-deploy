@@ -113,7 +113,7 @@ for i in $logs $files; do
 done
 
 kubectl rollout status sts/node-desktop -n purelab --timeout=300s
-for i in $(kubectl get pod -n purelab -l app=node-desktop -o jsonpath='{.items[*].metadata.name}'); do (
+for i in $(kubectl get pod -n purelab -l app=node-desktop -o jsonpath='{.items[*].metadata.name}'); do
   echo copying files to pod $i
   kubectl exec -n purelab $i -- mkdir -p /support/Toolkit /support/logs
   for j in $logs; do
@@ -124,8 +124,7 @@ for i in $(kubectl get pod -n purelab -l app=node-desktop -o jsonpath='{.items[*
   done
   kubectl exec -n purelab $i -- chown -R headless.headless /support
   eval kubectl exec -n purelab $i -- chmod 755 /support/Toolkit/{$(echo $files | sed 's/ /,/g')}
-) & done
-wait
+done
 echo finished copying files
 kubectl delete pod -n purelab --field-selector=status.phase=Failed
 
