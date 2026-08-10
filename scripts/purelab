@@ -134,6 +134,9 @@ cat <<\EOF >/px-deploy/script-delete/purelab.sh
 set -e
 
 kubectl delete svc -n purelab nginx
+kubectl delete sts -n purelab node-desktop
+kubectl delete deploy -n purelab postgres
+kubectl delete pvc -n purelab --all
 
 DOMAIN="__DOMAIN__".
 NAME="__NAME__"
